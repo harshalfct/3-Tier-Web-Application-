@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: three-tier
+  labels:
+    app: mysql
+    app.kubernetes.io/part-of: three-tier-app
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3306
+      targetPort: 3306
+      name: mysql
+  selector:
+    app: mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: three-tier
+  labels:
+    app: mysql
+    app.kubernetes.io/part-of: three-tier-app
+    app.kubernetes.io/component: database
+spec:
+  serviceName: mysql-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+        app.kubernetes.io/part-of: three-tier-app
+        app.kubernetes.io/component: database
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: DB_NAME
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_PASSWORD
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+              subPath: data
+            - name: mysql-init
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
+          startupProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "mysqladmin ping -h localhost -uroot -p$MYSQL_ROOT_PASSWORD"
+            initialDelaySeconds: 20
+            failureThreshold: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "mysqladmin ping -h localhost -uroot -p$MYSQL_ROOT_PASSWORD"
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "mysqladmin ping -h localhost -uroot -p$MYSQL_ROOT_PASSWORD"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+        - name: mysql-init
+          configMap:
+            name: mysql-init-config

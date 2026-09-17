@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: three-tier
+
+resources:
+  - 00-namespace.yaml
+  - 01-secret.yaml
+  - 02-configmap.yaml
+  - 03-mysql-pv-pvc.yaml
+  - 04-mysql-statefulset.yaml
+  - 05-backend-deployment.yaml
+  - 06-frontend-deployment.yaml
+  - 07-ingress.yaml
+  - 08-proxy-nodeport.yaml
+  - 09-network-policy.yaml
+
+# Common labels applied to all generated resources
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: three-tier-app
+
+# Optional: Override image names or tags easily without touching manifests
+# images:
+#   - name: three-tier-backend
+#     newName: mydockerhubuser/three-tier-backend
+#     newTag: 1.0.0
+#   - name: three-tier-frontend
+#     newName: mydockerhubuser/three-tier-frontend
+#     newTag: 1.0.0

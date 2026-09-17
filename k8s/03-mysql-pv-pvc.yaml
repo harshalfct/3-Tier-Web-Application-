@@ -1,0 +1,18 @@
+# Persistent Volume Claim for MySQL Database
+# Automatically provisions storage via the cluster's default StorageClass
+# (such as 'hostpath' in Docker Desktop, or 'local-path-provisioner' / Longhorn in Kubeadm).
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: three-tier
+  labels:
+    app.kubernetes.io/part-of: three-tier-app
+    app.kubernetes.io/component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

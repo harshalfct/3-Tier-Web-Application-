@@ -1,0 +1,96 @@
+# NetworkPolicies enforcing zero-trust microsegmentation:
+# Replicates the original 'web-network' and 'db-network' architecture:
+# - Frontend: only accessible from Ingress / Proxy (port 80). Cannot reach MySQL.
+# - Backend: accessible from Ingress / Proxy (port 5000). Allowed to connect to MySQL (port 3306).
+# - Database: strictly isolated, ONLY accepts incoming connections from Backend (port 3306).
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-network-policy
+  namespace: three-tier
+  labels:
+    app.kubernetes.io/part-of: three-tier-app
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow incoming traffic from Ingress controller and Proxy pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app: proxy
+        - namespaceSelector: {} # Allow from ingress-nginx controller in other namespaces
+      ports:
+        - protocol: TCP
+          port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-network-policy
+  namespace: three-tier
+  labels:
+    app.kubernetes.io/part-of: three-tier-app
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow incoming traffic from Ingress controller and Proxy pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app: proxy
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5000
+  egress:
+    # Allow egress to MySQL on port 3306
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mysql
+      ports:
+        - protocol: TCP
+          port: 3306
+    # Allow DNS lookup to CoreDNS in kube-system
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mysql-network-policy
+  namespace: three-tier
+  labels:
+    app.kubernetes.io/part-of: three-tier-app
+spec:
+  podSelector:
+    matchLabels:
+      app: mysql
+  policyTypes:
+    - Ingress
+  ingress:
+    # Strictly allow ONLY backend pods to communicate with MySQL
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 3306

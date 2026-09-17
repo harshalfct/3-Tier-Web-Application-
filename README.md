@@ -37,6 +37,7 @@ For security, the containers are separated into two isolated networks:
 ├── .env.example          # Sample environment variables template
 ├── docker-compose.yml    # Orchestrates services and isolated networks
 │
+├── k8s/                  # Kubernetes (Kubeadm) production manifests & guide
 ├── proxy/                # NGINX reverse proxy configuration
 │   ├── Dockerfile
 │   └── nginx.conf
@@ -60,6 +61,18 @@ For security, the containers are separated into two isolated networks:
 │
 └── db/                   # Database initialization
     └── init.sql          # Creates users table
+```
+
+---
+
+## Kubernetes Deployment (Kubeadm)
+
+To deploy this application on a production-ready Kubernetes cluster (Kubeadm), refer to the dedicated guide in [`k8s/README.md`](file:///e:/3-Tier-Web-Application-/k8s/README.md).
+
+Quick start:
+```bash
+# Apply all manifests using Kustomize:
+kubectl apply -k k8s/
 ```
 
 ---
